@@ -69,6 +69,7 @@ namespace RTLIL
 	struct SigSpec;
 	struct CaseRule;
 	struct SwitchRule;
+	struct MemWriteAction;
 	struct SyncRule;
 	struct Process;
 
@@ -1543,11 +1544,21 @@ struct RTLIL::SwitchRule : public RTLIL::AttrObject
 	RTLIL::SwitchRule *clone() const;
 };
 
+struct RTLIL::MemWriteAction : RTLIL::AttrObject
+{
+	RTLIL::IdString memid;
+	RTLIL::SigSpec address;
+	RTLIL::SigSpec data;
+	RTLIL::SigSpec enable;
+	RTLIL::Const priority_mask;
+};
+
 struct RTLIL::SyncRule
 {
 	RTLIL::SyncType type;
 	RTLIL::SigSpec signal;
 	std::vector<RTLIL::SigSig> actions;
+	std::vector<RTLIL::MemWriteAction> mem_write_actions;
 
 	template<typename T> void rewrite_sigspecs(T &functor);
 	template<typename T> void rewrite_sigspecs2(T &functor);
@@ -1695,6 +1706,11 @@ void RTLIL::SyncRule::rewrite_sigspecs(T &functor)
 		functor(it.first);
 		functor(it.second);
 	}
+	for (auto &it : mem_write_actions) {
+		functor(it.address);
+		functor(it.data);
+		functor(it.enable);
+	}
 }
 
 template<typename T>
@@ -1703,6 +1719,11 @@ void RTLIL::SyncRule::rewrite_sigspecs2(T &functor)
 	functor(signal);
 	for (auto &it : actions) {
 		functor(it.first, it.second);
+	}
+	for (auto &it : mem_write_actions) {
+		functor(it.address);
+		functor(it.data);
+		functor(it.enable);
 	}
 }
 
